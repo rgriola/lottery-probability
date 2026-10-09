@@ -162,6 +162,49 @@ button:disabled {
   max-width: 65ch;
 }
 
+.suggested-combo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.suggested-combo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.suggested-combo-rank {
+  font-weight: 700;
+  color: #555;
+  min-width: 2rem;
+}
+
+.suggested-combo-balls {
+  flex-wrap: nowrap;
+}
+
+.suggested-combo-stats {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: #555;
+  white-space: nowrap;
+}
+
+.suggested-combo-stat strong {
+  color: #111;
+}
+
 .chart-wrapper {
   position: relative;
   height: 260px;
@@ -245,9 +288,26 @@ button:disabled {
 }
 
 .cold-ball {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  padding: 0.4rem 0.5rem;
+  border-radius: 10px;
   background: var(--surface);
   border: 1px dashed var(--border);
   color: var(--text);
+  line-height: 1;
+}
+
+.cold-ball-gap {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #9aa1ad;
 }
 
 .recent-draws-grid {

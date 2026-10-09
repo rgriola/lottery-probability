@@ -2,7 +2,7 @@ import "./style.css";
 import { megaMillions, powerball, type GameConfig } from "./games/registry";
 import type { NormalizedDraw } from "./types/lottery";
 import { loadCachedDraws, syncGame, type SyncResult } from "./data/sync";
-import { rankNumbers } from "./stats/probabilityScore";
+import { rankNumbers, type NumberScore } from "./stats/probabilityScore";
 import { selectPoolNumbers } from "./stats/eraFilter";
 import { calculateSumStats } from "./stats/sumTotal";
 import {
@@ -16,6 +16,9 @@ import { renderRankedTable } from "./ui/renderRankedList";
 import { renderRecentDraws } from "./ui/renderRecentDraws";
 import { renderColdNumbers } from "./ui/renderColdNumbers";
 import { renderDataInsights } from "./ui/renderDataInsights";
+import { calculateOddEvenDistribution } from "./stats/oddEven";
+import { generateSuggestedCombinations } from "./stats/combinationGenerator";
+import { renderSuggestedCombinations } from "./ui/renderSuggestedCombinations";
 
 const TOP_N = 15;
 const RECENT_DRAWS_COUNT = 15;
@@ -95,8 +98,8 @@ app.innerHTML = `
     </article>
 
     <aside class="pool-section results-row-side">
-      <h2>Not Drawn</h2>
-      <p class="pool-meta">No appearance in the last ${RECENT_DRAWS_COUNT} draws.</p>
+      <h2>Missing Main</h2>
+     <!-- <p class="pool-meta">No appearance in the last ${RECENT_DRAWS_COUNT} draws.</p> -->
       <div id="cold-numbers"></div>
     </aside>
     </div>
@@ -108,11 +111,24 @@ app.innerHTML = `
       <div id="main-pool-table" class="ranked-table-scroll"></div>
     </article>
 
-    <article class="pool-section">
+    <div class="results-row">
+    <article class="pool-section results-row-grow">
       <h2 id="bonus-pool-title"></h2>
       <p id="bonus-pool-meta" class="pool-meta"></p>
       <div class="chart-wrapper"><canvas id="bonus-pool-chart"></canvas></div>
       <div id="bonus-pool-table" class="ranked-table-scroll"></div>
+    </article>
+
+    <aside class="pool-section results-row-side">
+      <h2>Missing Mega</h2>
+      <div id="cold-numbers-bonus"></div>
+    </aside>
+    </div>
+
+    <article class="pool-section">
+      <h2>Suggested Combinations</h2>
+      <p id="suggested-combos-meta" class="pool-meta"></p>
+      <div id="suggested-combos"></div>
     </article>
 
     <article class="pool-section">
@@ -232,7 +248,7 @@ function renderPool(
   metaEl: HTMLElement,
   canvas: HTMLCanvasElement,
   tableEl: HTMLElement,
-): void {
+): NumberScore[] {
   const pool = field === "mainNumbers" ? game.mainPool : game.bonusPool;
   const label = field === "mainNumbers" ? "Main Numbers" : game.bonusName;
   const eraDraws = selectPoolNumbers(draws, pool, field);
@@ -245,6 +261,7 @@ function renderPool(
   // Both pools now show their complete ranked list (scrollable), rather
   // than trimming to the top N.
   renderRankedTable(tableEl, scores, scores.length);
+  return scores;
 }
 
 function renderResults(draws: NormalizedDraw[]): void {
@@ -278,12 +295,21 @@ function renderResults(draws: NormalizedDraw[]): void {
 
   renderColdNumbers(
     document.querySelector("#cold-numbers")!,
-    activeGame,
+    activeGame.mainPool,
+    "mainNumbers",
     draws,
     RECENT_DRAWS_COUNT,
   );
 
-  renderPool(
+  renderColdNumbers(
+    document.querySelector("#cold-numbers-bonus")!,
+    activeGame.bonusPool,
+    "bonusNumber",
+    draws,
+    RECENT_DRAWS_COUNT,
+  );
+
+  const mainScores = renderPool(
     activeGame,
     "mainNumbers",
     draws,
@@ -293,7 +319,7 @@ function renderResults(draws: NormalizedDraw[]): void {
     document.querySelector("#main-pool-table")!,
   );
 
-  renderPool(
+  const bonusScores = renderPool(
     activeGame,
     "bonusNumber",
     draws,
@@ -302,6 +328,31 @@ function renderResults(draws: NormalizedDraw[]): void {
     document.querySelector("#bonus-pool-chart")!,
     document.querySelector("#bonus-pool-table")!,
   );
+
+  const oddEvenGroups = calculateOddEvenDistribution(
+    eraMainNumbers,
+    activeGame.mainPool.count,
+  );
+  const suggestedCombos = generateSuggestedCombinations(
+    mainScores,
+    bonusScores,
+    oddEvenGroups,
+    sumStats,
+    activeGame.mainPool.count,
+  );
+  renderSuggestedCombinations(
+    document.querySelector("#suggested-combos")!,
+    suggestedCombos,
+  );
+  const allowedSplitsLabel = [...oddEvenGroups]
+    .sort((a, b) => b.percentage - a.percentage)
+    .slice(0, 2)
+    .map((g) => `${g.oddCount}/${g.evenCount}`)
+    .join(" or ");
+  const sumMin = Math.round(sumStats.mean - sumStats.stdDev);
+  const sumMax = Math.round(sumStats.mean + sumStats.stdDev);
+  document.querySelector("#suggested-combos-meta")!.textContent =
+    `Candidates drawn from the top-scoring numbers, keeping only combos with an ${allowedSplitsLabel} odd/even split and a sum between ${sumMin}-${sumMax} (the historically common range). A statistical heuristic, not a prediction - every combination remains equally random in an actual draw.`;
 
   renderDataInsights(
     document.querySelector("#odd-even-chart")!,
