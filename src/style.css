@@ -1,11 +1,15 @@
 :root {
   color-scheme: light dark;
-  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
-  --bg: #0f1115;
+  font-family:
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    sans-serif;
+  --bg: #fff;
   --surface: #171a21;
   --border: #2a2f3a;
   --text: #e8eaed;
-  --muted: #9aa3b2;
+  --muted: #111;
   --accent: #ea580c;
 }
 
