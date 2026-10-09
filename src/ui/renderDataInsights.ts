@@ -4,6 +4,7 @@ import { calculateSumDistribution } from '../stats/sumTotal';
 import { calculatePairFrequency, topPairs } from '../stats/pairFrequency';
 import { renderPairHeatmap } from './renderPairHeatmap';
 import { renderPairNetwork } from './renderPairNetwork';
+import { renderPairBubbleChart } from './renderPairBubbleChart';
 import { renderTopPairsTable } from './renderTopPairsTable';
 
 /**
@@ -22,6 +23,8 @@ export function renderDataInsights(
   topPairsMetaEl: HTMLElement,
   networkCanvas: HTMLCanvasElement,
   networkMetaEl: HTMLElement,
+  bubbleCanvas: HTMLCanvasElement,
+  bubbleMetaEl: HTMLElement,
   heatmapCanvas: HTMLCanvasElement,
   heatmapMetaEl: HTMLElement,
   heatmapTooltipEl: HTMLElement,
@@ -59,5 +62,6 @@ export function renderDataInsights(
 
   renderTopPairsTable(topPairsTableBodyEl, topPairsMetaEl, topPairs(pairResult, 15), pairResult.totalDraws);
   renderPairNetwork(networkCanvas, networkMetaEl, pairResult);
+  renderPairBubbleChart(bubbleCanvas, bubbleMetaEl, pairResult);
   renderPairHeatmap(heatmapCanvas, heatmapMetaEl, heatmapTooltipEl, pairResult);
 }

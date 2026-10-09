@@ -1,3 +1,24 @@
+/** Mean and standard deviation of a set of draws' number sums. */
+export interface SumStats {
+  mean: number;
+  stdDev: number;
+}
+
+/**
+ * Computes the mean and (population) standard deviation of draws' number
+ * sums, used to express how unusually high/low a given draw's total was
+ * (e.g. "+1.2σ" above the long-run average).
+ * @param drawNumbers - One array per draw (already era-filtered).
+ */
+export function calculateSumStats(drawNumbers: number[][]): SumStats {
+  const sums = drawNumbers.map((numbers) => numbers.reduce((total, n) => total + n, 0));
+  if (sums.length === 0) return { mean: 0, stdDev: 0 };
+
+  const mean = sums.reduce((total, s) => total + s, 0) / sums.length;
+  const variance = sums.reduce((total, s) => total + (s - mean) ** 2, 0) / sums.length;
+  return { mean, stdDev: Math.sqrt(variance) };
+}
+
 /** How often draws' number sums fell into a given range bucket. */
 export interface SumBucket {
   rangeMin: number;

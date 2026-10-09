@@ -4,15 +4,25 @@ import type { NormalizedDraw } from "./types/lottery";
 import { loadCachedDraws, syncGame, type SyncResult } from "./data/sync";
 import { rankNumbers } from "./stats/probabilityScore";
 import { selectPoolNumbers } from "./stats/eraFilter";
+import { calculateSumStats } from "./stats/sumTotal";
+import {
+  getNextDrawInfo,
+  formatCountdown,
+  toEasternDateString,
+} from "./stats/drawSchedule";
+import { formatIsoDate, formatEasternDate } from "./utils/formatDate";
 import { renderScoreChart } from "./charts/renderChart";
 import { renderRankedTable } from "./ui/renderRankedList";
 import { renderRecentDraws } from "./ui/renderRecentDraws";
+import { renderColdNumbers } from "./ui/renderColdNumbers";
 import { renderDataInsights } from "./ui/renderDataInsights";
 
 const TOP_N = 15;
 const RECENT_DRAWS_COUNT = 15;
 const games: GameConfig[] = [megaMillions, powerball];
 let activeGame: GameConfig = megaMillions;
+let latestCachedDrawDate: string | null = null;
+let countdownTimer: ReturnType<typeof setInterval> | undefined;
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
@@ -22,26 +32,74 @@ app.innerHTML = `
   </header>
 
   <section class="controls">
-    <label for="game-select">Game</label>
-    <select id="game-select">
-      ${games
-        .map(
-          (g) =>
-            `<option value="${g.id}" ${g.enabled ? "" : "disabled"}>${g.name}${
-              g.enabled ? "" : " (coming soon)"
-            }</option>`,
-        )
-        .join("")}
-    </select>
-    <button id="sync-btn">Sync Latest Data</button>
-    <span id="sync-status" class="sync-status"></span>
+    <div class="controls-header">
+      <div class="game-heading">
+        <h2 id="game-title" class="game-title"></h2>
+        <p id="sync-status" class="sync-status"></p>
+      </div>
+      <div class="next-draw" id="next-draw">
+        <p class="next-draw-label" id="next-draw-label"></p>
+        <p class="next-draw-countdown" id="next-draw-countdown"></p>
+      </div>
+    </div>
+    <div class="controls-actions">
+      <label for="game-select" class="sr-only">Game</label>
+      <select id="game-select">
+        ${games
+          .map(
+            (g) =>
+              `<option value="${g.id}" ${g.enabled ? "" : "disabled"}>${g.name}${
+                g.enabled ? "" : " (coming soon)"
+              }</option>`,
+          )
+          .join("")}
+      </select>
+      <button id="sync-btn">Sync Latest Data</button>
+    </div>
   </section>
 
   <section id="results" class="results hidden">
-    <article class="pool-section">
-      <h2>Last ${RECENT_DRAWS_COUNT} Draws</h2>
+    <div class="results-row">
+    <article class="pool-section results-row-grow">
+      <div class="pool-section-header">
+        <h2>Last ${RECENT_DRAWS_COUNT} Draws</h2>
+        <button
+          id="legend-toggle"
+          type="button"
+          class="legend-toggle"
+          aria-expanded="false"
+          aria-controls="draw-legend-panel"
+          title="Show/hide color legend"
+        >
+          <span class="legend-toggle-track">
+            <span class="legend-toggle-label legend-toggle-label-on">I</span>
+            <span class="legend-toggle-label legend-toggle-label-off">O</span>
+            <span class="legend-toggle-thumb"></span>
+          </span>
+          Legend
+        </button>
+      </div>
+      <div id="draw-legend-panel" class="draw-legend-panel hidden">
+        <ul class="draw-legend">
+          <li><span class="legend-swatch legend-ball legend-ball-default"></span>No repeat</li>
+          <li><span class="legend-swatch legend-ball draw-ball-repeat-1"></span>Repeats once in last ${RECENT_DRAWS_COUNT}</li>
+          <li><span class="legend-swatch legend-ball draw-ball-repeat-2"></span>Repeats twice</li>
+          <li><span class="legend-swatch legend-ball draw-ball-repeat-3"></span>Repeats 3+ times</li>
+          <li><span class="legend-swatch legend-ball draw-ball-bonus"></span>Bonus ball (no repeat)</li>
+          <li><span class="legend-swatch legend-ball draw-ball-bonus draw-ball-bonus-repeat-3"></span>Bonus ball, repeats 3+ times</li>
+          <li><span class="legend-swatch legend-total"><span class="legend-z legend-z-high">+\u03c3</span></span>Total above era average</li>
+          <li><span class="legend-swatch legend-total"><span class="legend-z legend-z-low">-\u03c3</span></span>Total below era average</li>
+        </ul>
+      </div>
       <div id="recent-draws"></div>
     </article>
+
+    <aside class="pool-section results-row-side">
+      <h2>Not Drawn</h2>
+      <p class="pool-meta">No appearance in the last ${RECENT_DRAWS_COUNT} draws.</p>
+      <div id="cold-numbers"></div>
+    </aside>
+    </div>
 
     <article class="pool-section">
       <h2 id="main-pool-title"></h2>
@@ -92,6 +150,11 @@ app.innerHTML = `
           </div>
         </div>
         <div class="insight-card insight-card--wide">
+          <h3>Pair Bubble Chart</h3>
+          <p id="pair-bubble-meta" class="pool-meta"></p>
+          <div class="chart-wrapper chart-wrapper-large"><canvas id="pair-bubble-chart"></canvas></div>
+        </div>
+        <div class="insight-card insight-card--wide">
           <h3>Number Pair Heatmap</h3>
           <p id="pair-heatmap-meta" class="pool-meta"></p>
           <div class="heatmap-wrapper">
@@ -109,18 +172,56 @@ app.innerHTML = `
   </section>
 `;
 
+const gameTitle = document.querySelector<HTMLHeadingElement>("#game-title")!;
 const gameSelect = document.querySelector<HTMLSelectElement>("#game-select")!;
 const syncBtn = document.querySelector<HTMLButtonElement>("#sync-btn")!;
-const syncStatus = document.querySelector<HTMLSpanElement>("#sync-status")!;
+const syncStatus =
+  document.querySelector<HTMLParagraphElement>("#sync-status")!;
 const resultsSection = document.querySelector<HTMLElement>("#results")!;
 const emptyState = document.querySelector<HTMLElement>("#empty-state")!;
+const nextDrawLabel =
+  document.querySelector<HTMLParagraphElement>("#next-draw-label")!;
+const nextDrawCountdown = document.querySelector<HTMLParagraphElement>(
+  "#next-draw-countdown",
+)!;
+const legendToggle =
+  document.querySelector<HTMLButtonElement>("#legend-toggle")!;
+const legendPanel = document.querySelector<HTMLElement>("#draw-legend-panel")!;
+
+function updateCountdown(): void {
+  const { nextDraw, lastScheduledDraw } = getNextDrawInfo(
+    activeGame.drawSchedule,
+  );
+  const lastScheduledDateStr = toEasternDateString(lastScheduledDraw);
+  const isSynced =
+    latestCachedDrawDate !== null &&
+    latestCachedDrawDate >= lastScheduledDateStr;
+
+  if (isSynced) {
+    nextDrawLabel.textContent = `Next Draw: ${formatEasternDate(nextDraw)}`;
+    nextDrawCountdown.textContent = formatCountdown(
+      nextDraw.getTime() - Date.now(),
+    );
+    nextDrawCountdown.classList.remove("next-draw-countdown--overdue");
+  } else {
+    nextDrawLabel.textContent = `Draw pending sync (${formatEasternDate(lastScheduledDraw)})`;
+    nextDrawCountdown.textContent = `+${formatCountdown(Date.now() - lastScheduledDraw.getTime())}`;
+    nextDrawCountdown.classList.add("next-draw-countdown--overdue");
+  }
+}
+
+function startCountdown(): void {
+  if (countdownTimer) clearInterval(countdownTimer);
+  updateCountdown();
+  countdownTimer = setInterval(updateCountdown, 1000);
+}
 
 function formatSyncStatus(result: SyncResult, draws: NormalizedDraw[]): string {
   if (draws.length === 0) return "No data cached yet.";
-  const latest = draws[draws.length - 1]?.drawDate ?? "n/a";
+  const latest = draws[draws.length - 1]?.drawDate;
   const newPart =
     result.newDrawCount > 0 ? ` (+${result.newDrawCount} new)` : "";
-  return `${draws.length} draws cached${newPart} • latest: ${latest}`;
+  return `${draws.length} draws cached${newPart} • latest: ${latest ? formatIsoDate(latest) : "n/a"}`;
 }
 
 function renderPool(
@@ -137,7 +238,7 @@ function renderPool(
   const eraDraws = selectPoolNumbers(draws, pool, field);
 
   titleEl.textContent = `${label} (${pool.min}-${pool.max})`;
-  metaEl.textContent = `Using ${eraDraws.length} draws under current rules (since ${pool.effectiveSince}). Excludes earlier draw formats.`;
+  metaEl.textContent = `Using ${eraDraws.length} draws under current rules (since ${formatIsoDate(pool.effectiveSince)}). Excludes earlier draw formats.`;
 
   const scores = rankNumbers(draws, pool, field);
   renderScoreChart(canvas, scores, TOP_N);
@@ -147,6 +248,10 @@ function renderPool(
 }
 
 function renderResults(draws: NormalizedDraw[]): void {
+  latestCachedDrawDate =
+    draws.length > 0 ? draws[draws.length - 1].drawDate : null;
+  startCountdown();
+
   if (draws.length === 0) {
     resultsSection.classList.add("hidden");
     emptyState.classList.remove("hidden");
@@ -156,8 +261,23 @@ function renderResults(draws: NormalizedDraw[]): void {
   resultsSection.classList.remove("hidden");
   emptyState.classList.add("hidden");
 
+  const eraMainNumbers = selectPoolNumbers(
+    draws,
+    activeGame.mainPool,
+    "mainNumbers",
+  );
+  const sumStats = calculateSumStats(eraMainNumbers);
+
   renderRecentDraws(
     document.querySelector("#recent-draws")!,
+    activeGame,
+    draws,
+    RECENT_DRAWS_COUNT,
+    sumStats,
+  );
+
+  renderColdNumbers(
+    document.querySelector("#cold-numbers")!,
     activeGame,
     draws,
     RECENT_DRAWS_COUNT,
@@ -183,11 +303,6 @@ function renderResults(draws: NormalizedDraw[]): void {
     document.querySelector("#bonus-pool-table")!,
   );
 
-  const eraMainNumbers = selectPoolNumbers(
-    draws,
-    activeGame.mainPool,
-    "mainNumbers",
-  );
   renderDataInsights(
     document.querySelector("#odd-even-chart")!,
     document.querySelector("#odd-even-meta")!,
@@ -197,6 +312,8 @@ function renderResults(draws: NormalizedDraw[]): void {
     document.querySelector("#top-pairs-meta")!,
     document.querySelector("#pair-network-chart")!,
     document.querySelector("#pair-network-meta")!,
+    document.querySelector("#pair-bubble-chart")!,
+    document.querySelector("#pair-bubble-meta")!,
     document.querySelector("#pair-heatmap-chart")!,
     document.querySelector("#pair-heatmap-meta")!,
     document.querySelector("#pair-heatmap-tooltip")!,
@@ -207,6 +324,7 @@ function renderResults(draws: NormalizedDraw[]): void {
 }
 
 async function loadAndRender(): Promise<void> {
+  gameTitle.textContent = activeGame.name;
   syncStatus.textContent = "Loading cached data…";
   const result = await loadCachedDraws(activeGame);
   syncStatus.textContent = formatSyncStatus(result, result.draws);
@@ -219,6 +337,13 @@ gameSelect.addEventListener("change", () => {
     activeGame = selected;
     void loadAndRender();
   }
+});
+
+legendToggle.addEventListener("click", () => {
+  const isOpen = legendToggle.getAttribute("aria-expanded") === "true";
+  legendToggle.setAttribute("aria-expanded", String(!isOpen));
+  legendPanel.classList.toggle("hidden", isOpen);
+  legendToggle.classList.toggle("legend-toggle--on", !isOpen);
 });
 
 syncBtn.addEventListener("click", async () => {

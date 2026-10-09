@@ -31,6 +31,8 @@ export const megaMillions: GameConfig = {
   bonusName: 'Mega Ball',
   datasetId: '5xaw-6ayf',
   enabled: true,
+  // Tuesday (2) and Friday (5) at 11:00 PM Eastern Time.
+  drawSchedule: { days: [2, 5], hourET: 23, minuteET: 0 },
   parseRow(row: SocrataRow): NormalizedDraw | null {
     const mainNumbers = parseNumberList(row.winning_numbers);
     const bonusNumber = row.mega_ball ? parseInt(row.mega_ball, 10) : NaN;
@@ -69,6 +71,8 @@ export const powerball: GameConfig = {
   bonusName: 'Powerball',
   datasetId: 'd6yy-54nr',
   enabled: false,
+  // Monday (1), Wednesday (3), and Saturday (6) at 10:59 PM Eastern Time.
+  drawSchedule: { days: [1, 3, 6], hourET: 22, minuteET: 59 },
   parseRow(row: SocrataRow): NormalizedDraw | null {
     const allNumbers = parseNumberList(row.winning_numbers);
     const drawDate = row.draw_date ? row.draw_date.slice(0, 10) : null;

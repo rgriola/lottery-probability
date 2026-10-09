@@ -41,6 +41,16 @@ export interface NormalizedDraw {
 /** Raw row shape returned by a Socrata dataset (all values are strings). */
 export type SocrataRow = Record<string, string>;
 
+/** Weekly drawing schedule, expressed in US Eastern Time (where the draws are held). */
+export interface DrawSchedule {
+  /** Day-of-week indices draws are held on (0 = Sunday ... 6 = Saturday). */
+  days: number[];
+  /** Draw time hour, Eastern Time, 24-hour clock. */
+  hourET: number;
+  /** Draw time minute, Eastern Time. */
+  minuteET: number;
+}
+
 /** Configuration describing how to fetch and normalize one game's data. */
 export interface GameConfig {
   id: string;
@@ -54,4 +64,6 @@ export interface GameConfig {
   parseRow: (row: SocrataRow) => NormalizedDraw | null;
   /** Whether this game is wired up for syncing/analysis yet. */
   enabled: boolean;
+  /** When this game's drawings are held, used for the next-draw countdown. */
+  drawSchedule: DrawSchedule;
 }
