@@ -47,32 +47,62 @@ app.innerHTML = `
       <h2 id="main-pool-title"></h2>
       <p id="main-pool-meta" class="pool-meta"></p>
       <div class="chart-wrapper"><canvas id="main-pool-chart"></canvas></div>
-      <div id="main-pool-table"></div>
+      <div id="main-pool-table" class="ranked-table-scroll"></div>
     </article>
 
     <article class="pool-section">
       <h2 id="bonus-pool-title"></h2>
       <p id="bonus-pool-meta" class="pool-meta"></p>
       <div class="chart-wrapper"><canvas id="bonus-pool-chart"></canvas></div>
-      <div id="bonus-pool-table"></div>
+      <div id="bonus-pool-table" class="ranked-table-scroll"></div>
     </article>
 
     <article class="pool-section">
       <h2>Data Insights</h2>
       <div class="insights-grid">
-        <div class="insight-card">
-          <h3>Odd / Even Split</h3>
-          <p id="odd-even-meta" class="pool-meta"></p>
-          <div class="chart-wrapper chart-wrapper-small"><canvas id="odd-even-chart"></canvas></div>
+        <div class="insights-row">
+          <div class="insight-card insights-row-grow">
+            <h3>Odd / Even Split</h3>
+            <p id="odd-even-meta" class="pool-meta"></p>
+            <div class="chart-wrapper chart-wrapper-small"><canvas id="odd-even-chart"></canvas></div>
+          </div>
+          <div class="insight-card insights-row-grow">
+            <h3>Ball Total (Sum)</h3>
+            <p id="sum-total-meta" class="pool-meta"></p>
+            <div class="chart-wrapper chart-wrapper-small"><canvas id="sum-total-chart"></canvas></div>
+          </div>
         </div>
-        <div class="insight-card">
-          <h3>Ball Total (Sum)</h3>
-          <p id="sum-total-meta" class="pool-meta"></p>
-          <div class="chart-wrapper chart-wrapper-small"><canvas id="sum-total-chart"></canvas></div>
+        <div class="insights-row">
+          <div class="insight-card insights-row-grow">
+            <h3>Top Pairs</h3>
+            <p id="top-pairs-meta" class="pool-meta"></p>
+            <table class="top-pairs-table">
+              <thead>
+                <tr><th>#</th><th>Pair</th><th>Count</th></tr>
+              </thead>
+              <tbody id="top-pairs-body"></tbody>
+            </table>
+          </div>
+          <div class="insight-card insights-row-fixed">
+            <h3>Pair Network</h3>
+            <p id="pair-network-meta" class="pool-meta"></p>
+            <div class="heatmap-wrapper">
+              <canvas id="pair-network-chart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="insight-card insight-card--wide">
+          <h3>Number Pair Heatmap</h3>
+          <p id="pair-heatmap-meta" class="pool-meta"></p>
+          <div class="heatmap-wrapper">
+            <canvas id="pair-heatmap-chart"></canvas>
+          </div>
         </div>
       </div>
     </article>
   </section>
+
+  <div id="pair-heatmap-tooltip" class="heatmap-tooltip"></div>
 
   <section id="empty-state" class="empty-state">
     <p>No data cached yet for ${activeGame.name}. Click "Sync latest data" to fetch the official draw history.</p>
@@ -111,7 +141,9 @@ function renderPool(
 
   const scores = rankNumbers(draws, pool, field);
   renderScoreChart(canvas, scores, TOP_N);
-  renderRankedTable(tableEl, scores, TOP_N);
+  // Both pools now show their complete ranked list (scrollable), rather
+  // than trimming to the top N.
+  renderRankedTable(tableEl, scores, scores.length);
 }
 
 function renderResults(draws: NormalizedDraw[]): void {
@@ -161,8 +193,16 @@ function renderResults(draws: NormalizedDraw[]): void {
     document.querySelector("#odd-even-meta")!,
     document.querySelector("#sum-total-chart")!,
     document.querySelector("#sum-total-meta")!,
+    document.querySelector("#top-pairs-body")!,
+    document.querySelector("#top-pairs-meta")!,
+    document.querySelector("#pair-network-chart")!,
+    document.querySelector("#pair-network-meta")!,
+    document.querySelector("#pair-heatmap-chart")!,
+    document.querySelector("#pair-heatmap-meta")!,
+    document.querySelector("#pair-heatmap-tooltip")!,
     eraMainNumbers,
     activeGame.mainPool.count,
+    activeGame.mainPool,
   );
 }
 

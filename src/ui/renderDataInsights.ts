@@ -1,6 +1,10 @@
 import { renderHistogramChart } from '../charts/renderChart';
 import { calculateOddEvenDistribution } from '../stats/oddEven';
 import { calculateSumDistribution } from '../stats/sumTotal';
+import { calculatePairFrequency, topPairs } from '../stats/pairFrequency';
+import { renderPairHeatmap } from './renderPairHeatmap';
+import { renderPairNetwork } from './renderPairNetwork';
+import { renderTopPairsTable } from './renderTopPairsTable';
 
 /**
  * Renders the "Data Insights" panel: how draws' main numbers split between
@@ -14,8 +18,16 @@ export function renderDataInsights(
   oddEvenMetaEl: HTMLElement,
   sumCanvas: HTMLCanvasElement,
   sumMetaEl: HTMLElement,
+  topPairsTableBodyEl: HTMLElement,
+  topPairsMetaEl: HTMLElement,
+  networkCanvas: HTMLCanvasElement,
+  networkMetaEl: HTMLElement,
+  heatmapCanvas: HTMLCanvasElement,
+  heatmapMetaEl: HTMLElement,
+  heatmapTooltipEl: HTMLElement,
   mainNumbers: number[][],
-  numbersPerDraw: number
+  numbersPerDraw: number,
+  mainPool: { min: number; max: number }
 ): void {
   const oddEvenGroups = calculateOddEvenDistribution(mainNumbers, numbersPerDraw);
   const mostCommonSplit = oddEvenGroups.reduce((best, g) => (g.count > best.count ? g : best));
@@ -42,4 +54,10 @@ export function renderDataInsights(
   } else {
     sumMetaEl.textContent = '';
   }
+
+  const pairResult = calculatePairFrequency(mainNumbers, mainPool.min, mainPool.max);
+
+  renderTopPairsTable(topPairsTableBodyEl, topPairsMetaEl, topPairs(pairResult, 15), pairResult.totalDraws);
+  renderPairNetwork(networkCanvas, networkMetaEl, pairResult);
+  renderPairHeatmap(heatmapCanvas, heatmapMetaEl, heatmapTooltipEl, pairResult);
 }

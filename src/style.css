@@ -37,6 +37,7 @@ body {
 .subtitle {
   color: var(--muted);
   margin-top: 0;
+  max-width: 65ch;
 }
 
 .controls {
@@ -97,6 +98,7 @@ button:disabled {
   color: var(--text);
   font-size: 0.85rem;
   margin-top: -0.5rem;
+  max-width: 65ch;
 }
 
 .chart-wrapper {
@@ -116,6 +118,33 @@ button:disabled {
   text-align: left;
   padding: 0.4rem 0.6rem;
   border-bottom: 1px solid var(--border);
+}
+
+.ranked-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.ranked-table th.sortable:hover {
+  color: var(--accent);
+}
+
+.ranked-table th.sorted {
+  color: var(--accent);
+}
+
+.ranked-table-scroll {
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+/* Keeps column headers visible (and clickable for sorting) while scrolling
+   through the full 70-number list. */
+.ranked-table-scroll .ranked-table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
 }
 
 .number-badge {
@@ -161,6 +190,7 @@ button:disabled {
   padding: 0 0.3rem;
   border-radius: 999px;
   background: var(--surface);
+  color: var(--text);
   border: 1px solid var(--border);
   font-size: 0.85rem;
 }
@@ -219,12 +249,104 @@ button:disabled {
   color: var(--muted);
 }
 
+.insight-card--wide {
+  grid-column: 1 / -1;
+}
+
+.insights-row {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* Grows/shrinks like a normal grid column; wraps below the fixed-width
+   card once there's no longer room for both side by side. */
+.insights-row-grow {
+  flex: 1 1 260px;
+}
+
+/* Keeps its natural content width (driven by the fixed-size canvas)
+   instead of stretching to fill the row's remaining space. */
+.insights-row-fixed {
+  /* Natural content width when there's room, but shrinks (rather than
+     overflowing the page) once it wraps onto its own narrow row. */
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
+.top-pairs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.top-pairs-table th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.top-pairs-table td {
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.top-pairs-rank {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.top-pairs-count {
+  font-weight: 600;
+  text-align: right;
+}
+
+.top-pairs-table .draw-ball {
+  min-width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.8rem;
+}
+
 .chart-wrapper-small {
   height: 200px;
+}
+
+.heatmap-wrapper {
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.heatmap-wrapper canvas {
+  display: block;
+  cursor: crosshair;
+}
+
+.heatmap-tooltip {
+  display: none;
+  position: fixed;
+  z-index: 10;
+  padding: 0.25rem 0.5rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .empty-state {
   text-align: center;
   color: var(--muted);
   padding: 3rem 1rem;
+}
+
+.empty-state p {
+  max-width: 65ch;
+  margin-left: auto;
+  margin-right: auto;
 }
