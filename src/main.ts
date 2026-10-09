@@ -1,23 +1,23 @@
-import './style.css';
-import { megaMillions, powerball, type GameConfig } from './games/registry';
-import type { NormalizedDraw } from './types/lottery';
-import { loadCachedDraws, syncGame, type SyncResult } from './data/sync';
-import { rankNumbers } from './stats/probabilityScore';
-import { selectPoolNumbers } from './stats/eraFilter';
-import { renderScoreChart } from './charts/renderChart';
-import { renderRankedTable } from './ui/renderRankedList';
-import { renderRecentDraws } from './ui/renderRecentDraws';
-import { renderDataInsights } from './ui/renderDataInsights';
+import "./style.css";
+import { megaMillions, powerball, type GameConfig } from "./games/registry";
+import type { NormalizedDraw } from "./types/lottery";
+import { loadCachedDraws, syncGame, type SyncResult } from "./data/sync";
+import { rankNumbers } from "./stats/probabilityScore";
+import { selectPoolNumbers } from "./stats/eraFilter";
+import { renderScoreChart } from "./charts/renderChart";
+import { renderRankedTable } from "./ui/renderRankedList";
+import { renderRecentDraws } from "./ui/renderRecentDraws";
+import { renderDataInsights } from "./ui/renderDataInsights";
 
 const TOP_N = 15;
 const RECENT_DRAWS_COUNT = 15;
 const games: GameConfig[] = [megaMillions, powerball];
 let activeGame: GameConfig = megaMillions;
 
-const app = document.querySelector<HTMLDivElement>('#app')!;
+const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
   <header class="app-header">
-    <h1>Lottery Probability</h1>
+    <h1 class="subtitle">Lottery Probability</h1>
     <p class="subtitle">Which numbers are statistically most likely to appear next?</p>
   </header>
 
@@ -27,13 +27,13 @@ app.innerHTML = `
       ${games
         .map(
           (g) =>
-            `<option value="${g.id}" ${g.enabled ? '' : 'disabled'}>${g.name}${
-              g.enabled ? '' : ' (coming soon)'
-            }</option>`
+            `<option value="${g.id}" ${g.enabled ? "" : "disabled"}>${g.name}${
+              g.enabled ? "" : " (coming soon)"
+            }</option>`,
         )
-        .join('')}
+        .join("")}
     </select>
-    <button id="sync-btn">Sync latest data</button>
+    <button id="sync-btn">Sync Latest Data</button>
     <span id="sync-status" class="sync-status"></span>
   </section>
 
@@ -79,30 +79,31 @@ app.innerHTML = `
   </section>
 `;
 
-const gameSelect = document.querySelector<HTMLSelectElement>('#game-select')!;
-const syncBtn = document.querySelector<HTMLButtonElement>('#sync-btn')!;
-const syncStatus = document.querySelector<HTMLSpanElement>('#sync-status')!;
-const resultsSection = document.querySelector<HTMLElement>('#results')!;
-const emptyState = document.querySelector<HTMLElement>('#empty-state')!;
+const gameSelect = document.querySelector<HTMLSelectElement>("#game-select")!;
+const syncBtn = document.querySelector<HTMLButtonElement>("#sync-btn")!;
+const syncStatus = document.querySelector<HTMLSpanElement>("#sync-status")!;
+const resultsSection = document.querySelector<HTMLElement>("#results")!;
+const emptyState = document.querySelector<HTMLElement>("#empty-state")!;
 
 function formatSyncStatus(result: SyncResult, draws: NormalizedDraw[]): string {
-  if (draws.length === 0) return 'No data cached yet.';
-  const latest = draws[draws.length - 1]?.drawDate ?? 'n/a';
-  const newPart = result.newDrawCount > 0 ? ` (+${result.newDrawCount} new)` : '';
+  if (draws.length === 0) return "No data cached yet.";
+  const latest = draws[draws.length - 1]?.drawDate ?? "n/a";
+  const newPart =
+    result.newDrawCount > 0 ? ` (+${result.newDrawCount} new)` : "";
   return `${draws.length} draws cached${newPart} • latest: ${latest}`;
 }
 
 function renderPool(
   game: GameConfig,
-  field: 'mainNumbers' | 'bonusNumber',
+  field: "mainNumbers" | "bonusNumber",
   draws: NormalizedDraw[],
   titleEl: HTMLElement,
   metaEl: HTMLElement,
   canvas: HTMLCanvasElement,
-  tableEl: HTMLElement
+  tableEl: HTMLElement,
 ): void {
-  const pool = field === 'mainNumbers' ? game.mainPool : game.bonusPool;
-  const label = field === 'mainNumbers' ? 'Main Numbers' : game.bonusName;
+  const pool = field === "mainNumbers" ? game.mainPool : game.bonusPool;
+  const label = field === "mainNumbers" ? "Main Numbers" : game.bonusName;
   const eraDraws = selectPoolNumbers(draws, pool, field);
 
   titleEl.textContent = `${label} (${pool.min}-${pool.max})`;
@@ -115,60 +116,64 @@ function renderPool(
 
 function renderResults(draws: NormalizedDraw[]): void {
   if (draws.length === 0) {
-    resultsSection.classList.add('hidden');
-    emptyState.classList.remove('hidden');
+    resultsSection.classList.add("hidden");
+    emptyState.classList.remove("hidden");
     return;
   }
 
-  resultsSection.classList.remove('hidden');
-  emptyState.classList.add('hidden');
+  resultsSection.classList.remove("hidden");
+  emptyState.classList.add("hidden");
 
   renderRecentDraws(
-    document.querySelector('#recent-draws')!,
+    document.querySelector("#recent-draws")!,
     activeGame,
     draws,
-    RECENT_DRAWS_COUNT
+    RECENT_DRAWS_COUNT,
   );
 
   renderPool(
     activeGame,
-    'mainNumbers',
+    "mainNumbers",
     draws,
-    document.querySelector('#main-pool-title')!,
-    document.querySelector('#main-pool-meta')!,
-    document.querySelector('#main-pool-chart')!,
-    document.querySelector('#main-pool-table')!
+    document.querySelector("#main-pool-title")!,
+    document.querySelector("#main-pool-meta")!,
+    document.querySelector("#main-pool-chart")!,
+    document.querySelector("#main-pool-table")!,
   );
 
   renderPool(
     activeGame,
-    'bonusNumber',
+    "bonusNumber",
     draws,
-    document.querySelector('#bonus-pool-title')!,
-    document.querySelector('#bonus-pool-meta')!,
-    document.querySelector('#bonus-pool-chart')!,
-    document.querySelector('#bonus-pool-table')!
+    document.querySelector("#bonus-pool-title")!,
+    document.querySelector("#bonus-pool-meta")!,
+    document.querySelector("#bonus-pool-chart")!,
+    document.querySelector("#bonus-pool-table")!,
   );
 
-  const eraMainNumbers = selectPoolNumbers(draws, activeGame.mainPool, 'mainNumbers');
+  const eraMainNumbers = selectPoolNumbers(
+    draws,
+    activeGame.mainPool,
+    "mainNumbers",
+  );
   renderDataInsights(
-    document.querySelector('#odd-even-chart')!,
-    document.querySelector('#odd-even-meta')!,
-    document.querySelector('#sum-total-chart')!,
-    document.querySelector('#sum-total-meta')!,
+    document.querySelector("#odd-even-chart")!,
+    document.querySelector("#odd-even-meta")!,
+    document.querySelector("#sum-total-chart")!,
+    document.querySelector("#sum-total-meta")!,
     eraMainNumbers,
-    activeGame.mainPool.count
+    activeGame.mainPool.count,
   );
 }
 
 async function loadAndRender(): Promise<void> {
-  syncStatus.textContent = 'Loading cached data…';
+  syncStatus.textContent = "Loading cached data…";
   const result = await loadCachedDraws(activeGame);
   syncStatus.textContent = formatSyncStatus(result, result.draws);
   renderResults(result.draws);
 }
 
-gameSelect.addEventListener('change', () => {
+gameSelect.addEventListener("change", () => {
   const selected = games.find((g) => g.id === gameSelect.value);
   if (selected && selected.enabled) {
     activeGame = selected;
@@ -176,9 +181,9 @@ gameSelect.addEventListener('change', () => {
   }
 });
 
-syncBtn.addEventListener('click', async () => {
+syncBtn.addEventListener("click", async () => {
   syncBtn.disabled = true;
-  syncStatus.textContent = 'Syncing with data.ny.gov…';
+  syncStatus.textContent = "Syncing with data.ny.gov…";
   try {
     const result = await syncGame(activeGame);
     syncStatus.textContent = formatSyncStatus(result, result.draws);

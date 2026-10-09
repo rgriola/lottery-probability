@@ -14,6 +14,11 @@ Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, L
 const TOP_HIGHLIGHT_COLOR = 'rgba(234, 88, 12, 0.85)'; // top-ranked numbers
 const BASE_COLOR = 'rgba(59, 130, 246, 0.55)';
 
+// renderScoreChart's canvas always sits on the dark .pool-section card, so its
+// axis text/gridlines need light colors to stay readable against that background.
+const AXIS_TEXT_ON_DARK = '#e8eaed';
+const GRID_LINE_ON_DARK = 'rgba(232, 234, 237, 0.15)';
+
 /**
  * Renders a bar chart of combined probability scores across every number in
  * a pool, ordered numerically (not by rank) so it reads like a familiar
@@ -53,8 +58,17 @@ export function renderScoreChart(
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        y: { beginAtZero: true, max: 100, title: { display: true, text: 'Score (0-100)' } },
-        x: { ticks: { autoSkip: true, maxTicksLimit: 24 } },
+        y: {
+          beginAtZero: true,
+          max: 100,
+          title: { display: true, text: 'Score (0-100)', color: AXIS_TEXT_ON_DARK },
+          ticks: { color: AXIS_TEXT_ON_DARK },
+          grid: { color: GRID_LINE_ON_DARK },
+        },
+        x: {
+          ticks: { autoSkip: true, maxTicksLimit: 24, color: AXIS_TEXT_ON_DARK },
+          grid: { color: GRID_LINE_ON_DARK },
+        },
       },
       plugins: {
         legend: { display: false },
