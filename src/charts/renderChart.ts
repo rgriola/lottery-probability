@@ -1,0 +1,64 @@
+import {
+  BarController,
+  BarElement,
+  CategoryScale,
+  Chart,
+  Legend,
+  LinearScale,
+  Tooltip,
+} from 'chart.js';
+import type { NumberScore } from '../stats/probabilityScore';
+
+Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+
+const TOP_HIGHLIGHT_COLOR = 'rgba(234, 88, 12, 0.85)'; // top-ranked numbers
+const BASE_COLOR = 'rgba(59, 130, 246, 0.55)';
+
+/**
+ * Renders a bar chart of combined probability scores across every number in
+ * a pool, ordered numerically (not by rank) so it reads like a familiar
+ * frequency histogram, with the top-ranked numbers highlighted.
+ */
+export function renderScoreChart(
+  canvas: HTMLCanvasElement,
+  scores: NumberScore[],
+  topHighlightCount: number
+): Chart {
+  const byNumber = [...scores].sort((a, b) => a.number - b.number);
+  const topNumbers = new Set(
+    [...scores]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topHighlightCount)
+      .map((s) => s.number)
+  );
+
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+
+  return new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: byNumber.map((s) => String(s.number)),
+      datasets: [
+        {
+          label: 'Combined score',
+          data: byNumber.map((s) => Math.round(s.score * 10) / 10),
+          backgroundColor: byNumber.map((s) =>
+            topNumbers.has(s.number) ? TOP_HIGHLIGHT_COLOR : BASE_COLOR
+          ),
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, max: 100, title: { display: true, text: 'Score (0-100)' } },
+        x: { ticks: { autoSkip: true, maxTicksLimit: 24 } },
+      },
+      plugins: {
+        legend: { display: false },
+      },
+    },
+  });
+}
