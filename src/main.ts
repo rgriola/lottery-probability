@@ -6,8 +6,11 @@ import { rankNumbers } from './stats/probabilityScore';
 import { selectPoolNumbers } from './stats/eraFilter';
 import { renderScoreChart } from './charts/renderChart';
 import { renderRankedTable } from './ui/renderRankedList';
+import { renderRecentDraws } from './ui/renderRecentDraws';
+import { renderDataInsights } from './ui/renderDataInsights';
 
 const TOP_N = 15;
+const RECENT_DRAWS_COUNT = 15;
 const games: GameConfig[] = [megaMillions, powerball];
 let activeGame: GameConfig = megaMillions;
 
@@ -36,6 +39,11 @@ app.innerHTML = `
 
   <section id="results" class="results hidden">
     <article class="pool-section">
+      <h2>Last ${RECENT_DRAWS_COUNT} Draws</h2>
+      <div id="recent-draws"></div>
+    </article>
+
+    <article class="pool-section">
       <h2 id="main-pool-title"></h2>
       <p id="main-pool-meta" class="pool-meta"></p>
       <div class="chart-wrapper"><canvas id="main-pool-chart"></canvas></div>
@@ -47,6 +55,22 @@ app.innerHTML = `
       <p id="bonus-pool-meta" class="pool-meta"></p>
       <div class="chart-wrapper"><canvas id="bonus-pool-chart"></canvas></div>
       <div id="bonus-pool-table"></div>
+    </article>
+
+    <article class="pool-section">
+      <h2>Data Insights</h2>
+      <div class="insights-grid">
+        <div class="insight-card">
+          <h3>Odd / Even Split</h3>
+          <p id="odd-even-meta" class="pool-meta"></p>
+          <div class="chart-wrapper chart-wrapper-small"><canvas id="odd-even-chart"></canvas></div>
+        </div>
+        <div class="insight-card">
+          <h3>Ball Total (Sum)</h3>
+          <p id="sum-total-meta" class="pool-meta"></p>
+          <div class="chart-wrapper chart-wrapper-small"><canvas id="sum-total-chart"></canvas></div>
+        </div>
+      </div>
     </article>
   </section>
 
@@ -99,6 +123,13 @@ function renderResults(draws: NormalizedDraw[]): void {
   resultsSection.classList.remove('hidden');
   emptyState.classList.add('hidden');
 
+  renderRecentDraws(
+    document.querySelector('#recent-draws')!,
+    activeGame,
+    draws,
+    RECENT_DRAWS_COUNT
+  );
+
   renderPool(
     activeGame,
     'mainNumbers',
@@ -117,6 +148,16 @@ function renderResults(draws: NormalizedDraw[]): void {
     document.querySelector('#bonus-pool-meta')!,
     document.querySelector('#bonus-pool-chart')!,
     document.querySelector('#bonus-pool-table')!
+  );
+
+  const eraMainNumbers = selectPoolNumbers(draws, activeGame.mainPool, 'mainNumbers');
+  renderDataInsights(
+    document.querySelector('#odd-even-chart')!,
+    document.querySelector('#odd-even-meta')!,
+    document.querySelector('#sum-total-chart')!,
+    document.querySelector('#sum-total-meta')!,
+    eraMainNumbers,
+    activeGame.mainPool.count
   );
 }
 

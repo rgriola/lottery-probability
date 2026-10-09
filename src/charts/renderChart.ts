@@ -62,3 +62,38 @@ export function renderScoreChart(
     },
   });
 }
+
+/** Renders a generic bar chart from pre-labeled buckets (e.g. sum ranges or odd/even splits). */
+export function renderHistogramChart(
+  canvas: HTMLCanvasElement,
+  labels: string[],
+  counts: number[],
+  yAxisLabel: string
+): Chart {
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+
+  return new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: yAxisLabel,
+          data: counts,
+          backgroundColor: BASE_COLOR,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: yAxisLabel } },
+      },
+      plugins: {
+        legend: { display: false },
+      },
+    },
+  });
+}
